@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma Watchlist</title>
+<style>
+:root{--bg:#f5f5f8;--card:#fff;--tx:#16161d;--mu:#6b6b7b;--ac:#6d4aff;--bd:#e2e2ea;--ok:#1fa968;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e0e14;--card:#181822;--tx:#f0f0f6;--mu:#8d8da0;--ac:#8a6dff;--bd:#2a2a3a;--ok:#3ddc97}}
+:root[data-theme="dark"]{--bg:#0e0e14;--card:#181822;--tx:#f0f0f6;--mu:#8d8da0;--ac:#8a6dff;--bd:#2a2a3a;--ok:#3ddc97}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 14px}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;padding:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;font-size:16px;font-weight:600}
+.tab.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.add{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input,select{padding:12px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:16px}
+#t{flex:1 1 100%}
+#g{flex:1}
+.btn{padding:12px 18px;border:0;border-radius:10px;background:var(--ac);color:#fff;font-size:16px;font-weight:600}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.cnt{color:var(--mu);font-size:14px;margin-bottom:12px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+.chip{flex:none;padding:7px 12px;border-radius:20px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:14px}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--mu);margin:18px 0 6px}
+.it{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:6px}
+.it input{width:24px;height:24px;accent-color:var(--ok);flex:none}
+.it span{flex:1;font-size:16px;word-break:break-word}
+.it.vu span{text-decoration:line-through;color:var(--mu)}
+.x{border:0;background:none;color:var(--mu);font-size:22px;padding:4px 8px}
+.empty{color:var(--mu);text-align:center;padding:30px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>🎬 Ma Watchlist</h1>
+<div class="tabs"><button class="tab on" id="tf">Films</button><button class="tab" id="ts">Séries</button></div>
+<div class="add">
+<input id="t" placeholder="Titre à ajouter…" autocomplete="off">
+<select id="g"></select>
+<button class="btn" id="a">Ajouter</button>
+</div>
+<div class="bar"><i id="p"></i></div>
+<div class="cnt" id="c"></div>
+<div class="chips" id="ch"></div>
+<div id="l"></div>
+</main>
+<script>
+var GENRES=["Action","Aventure","Animation","Comédie","Drame","Fantastique","Horreur","Policier / Thriller","Romance","Science-fiction","Documentaire","Autre"];
+var KEY="watchlist_v1";
+var data={films:[],series:[]};
+var tab="films",filt="Tous";
+try{var raw=localStorage.getItem(KEY);if(raw)data=JSON.parse(raw);}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+var $=function(i){return document.getElementById(i)};
+$("g").innerHTML=GENRES.map(function(g){return "<option>"+g+"</option>"}).join("");
+function esc(s){return s.replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function render(){
+ var list=data[tab];
+ $("tf").className="tab"+(tab=="films"?" on":"");
+ $("ts").className="tab"+(tab=="series"?" on":"");
+ var seen=list.filter(function(x){return x.s}).length;
+ $("c").textContent=seen+" / "+list.length+(tab=="films"?" films vus":" séries vues");
+ $("p").style.width=(list.length?seen*100/list.length:0)+"%";
+ var used=GENRES.filter(function(g){return list.some(function(x){return x.g==g})});
+ if(used.indexOf(filt)<0&&["Tous","À voir","Vus"].indexOf(filt)<0)filt="Tous";
+ $("ch").innerHTML=["Tous","À voir","Vus"].concat(used).map(function(g){return '<button class="chip'+(g==filt?" on":"")+'" data-g="'+esc(g)+'">'+esc(g)+"</button>"}).join("");
+ var shown=list.filter(function(x){
+  if(filt=="Tous")return true;if(filt=="À voir")return !x.s;if(filt=="Vus")return x.s;return x.g==filt});
+ if(!shown.length){$("l").innerHTML='<div class="empty">Rien ici pour le moment</div>';return}
+ var html="";
+ GENRES.forEach(function(g){
+  var items=shown.filter(function(x){return x.g==g});
+  if(!items.length)return;
+  html+="<h2>"+esc(g)+"</h2>";
+  items.forEach(function(x){
+   html+='<div class="it'+(x.s?" vu":"")+'"><input type="checkbox" data-id="'+x.id+'"'+(x.s?" checked":"")+"><span>"+esc(x.t)+'</span><button class="x" data-del="'+x.id+'">×</button></div>';
+  });
+ });
+ $("l").innerHTML=html;
+}
+function add(){
+ var v=$("t").value.trim();if(!v)return;
+ data[tab].push({id:Date.now()+Math.floor(Math.random()*1000),t:v,g:$("g").value,s:false});
+ $("t").value="";save();render();
+}
+$("a").onclick=add;
+$("t").onkeydown=function(e){if(e.key=="Enter")add()};
+$("tf").onclick=function(){tab="films";filt="Tous";render()};
+$("ts").onclick=function(){tab="series";filt="Tous";render()};
+$("ch").onclick=function(e){var g=e.target.getAttribute("data-g");if(g){filt=g;render()}};
+$("l").onclick=function(e){
+ var d=e.target.getAttribute("data-del");
+ if(d){data[tab]=data[tab].filter(function(x){return x.id!=d});save();render()}
+};
+$("l").onchange=function(e){
+ var id=e.target.getAttribute("data-id");
+ if(id){data[tab].forEach(function(x){if(x.id==id)x.s=e.target.checked});save();render()}
+};
+render();
+</script>
+</body>
+</html>
